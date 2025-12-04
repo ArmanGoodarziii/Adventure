@@ -17,6 +17,10 @@ public class LobbyManager : MonoBehaviourPunCallbacks
     {
         PhotonNetwork.JoinRoom(joinInput.text);
     }
+    public void JoinRoomInList(string roomName)
+    {
+        PhotonNetwork.JoinRoom(roomName);
+    }
     public override void OnJoinedRoom()
     {
         PhotonNetwork.LoadLevel("Level");
