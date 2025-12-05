@@ -118,11 +118,12 @@ public class GameManager : MonoBehaviourPun
 
         if (winner == -1)
         {
-            Debug.LogWarning("GameManager: No other players found. Ending with no winner.");
-            // still broadcast loser as winner fallback
-            photonView.RPC(nameof(RPC_EndGame), RpcTarget.AllBuffered, loserActorNumber);
+            Debug.LogWarning("Only one player in room. The loser should lose, no winner.");
+            // اعلام باخت همان بازیکن
+            photonView.RPC(nameof(RPC_EndGame), RpcTarget.AllBuffered, -1);
             return;
         }
+
 
         photonView.RPC(nameof(RPC_EndGame), RpcTarget.AllBuffered, winner);
     }
@@ -143,7 +144,14 @@ public class GameManager : MonoBehaviourPun
     {
         int myActor = PhotonNetwork.LocalPlayer.ActorNumber;
 
+        // تشخیص اولیه
         bool iAmWinner = (myActor == winnerActor);
+
+        // اگر هیچ برنده‌ای وجود ندارد (یعنی فقط یک بازیکن داخل بازی بود)
+        if (winnerActor == -1)
+        {
+            iAmWinner = false;  // یعنی من بازنده‌ام
+        }
 
         if (iAmWinner)
         {
@@ -151,21 +159,29 @@ public class GameManager : MonoBehaviourPun
         }
         else
         {
-            // 🔥 نابود کردن بازیکن بازنده
             KillLocalPlayer();
-
             ShowDefeatUI();
         }
     }
 
+
     private void KillLocalPlayer()
     {
-        Player localPlayer = FindFirstObjectByType<Player>();
-        if (localPlayer != null)
+        Player[] players = FindObjectsByType<Player>(FindObjectsSortMode.None);
+
+        foreach (var p in players)
         {
-            localPlayer.Die();
+            PhotonView pv = p.GetComponent<PhotonView>();
+            if (pv != null && pv.IsMine)
+            {
+                p.Die();   // فقط بازیکن خودم
+                return;
+            }
         }
+
+        Debug.LogWarning("No local player found to kill.");
     }
+
 
     private void ShowVictoryUI()
     {
