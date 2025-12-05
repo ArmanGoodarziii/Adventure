@@ -2,6 +2,7 @@ using UnityEngine;
 using Photon.Pun;
 using UnityEngine.InputSystem;
 using System.Collections;
+using UnityEngine.UI;
 
 public class Player : MonoBehaviourPun
 {
@@ -32,6 +33,7 @@ public class Player : MonoBehaviourPun
     public GameObject cameraObject;
     public GameObject canvasObject;
     public float yPos;
+    public Text username;
 
     private bool isGrounded;
     private bool isWall;
@@ -83,6 +85,8 @@ public class Player : MonoBehaviourPun
 
         PhotonNetwork.SendRate = 60;
         PhotonNetwork.SerializationRate = 60;
+
+        username.text = GetComponent<PhotonView>().Controller.NickName;
     }
 
     void Update()

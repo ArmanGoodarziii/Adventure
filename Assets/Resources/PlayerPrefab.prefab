@@ -210,6 +210,7 @@ MonoBehaviour:
   cameraObject: {fileID: 1782679877232624490}
   canvasObject: {fileID: 6279236323663693960}
   yPos: 1.5
+  username: {fileID: 166720522601728169}
 --- !u!50 &6486803922616607543
 Rigidbody2D:
   serializedVersion: 5
