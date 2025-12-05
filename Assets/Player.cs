@@ -9,6 +9,10 @@ public class Player : MonoBehaviourPun
     private PhotonView pv;
     private Rigidbody2D rb;
     private Animator animator;
+
+    [Header("Health")]
+    private float health = 3;
+
     [Header("Flip")]
     private float xScale;
     private bool faceRight = true;
@@ -24,19 +28,30 @@ public class Player : MonoBehaviourPun
     [SerializeField] private float groundCheckDistance;
     [SerializeField] private float wallCheckDistance;
     [SerializeField] private LayerMask layerGround;
+    
+    public GameObject cameraObject;
+    public GameObject canvasObject;
+    public float yPos;
 
     private bool isGrounded;
     private bool isWall;
     private bool isWallJumping;
-
+    private bool isHit;
+    private bool dontHit;
     
 
     void Awake()
     {
         pv = GetComponent<PhotonView>();
+        
         if (pv.IsMine)
         {
+            cameraObject.SetActive(true);
             actions = new InputSystem_Actions();
+        }
+        else
+        {
+            cameraObject.SetActive(false);
         }
     }
     void OnEnable()
@@ -65,10 +80,22 @@ public class Player : MonoBehaviourPun
         rb = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
         xScale = transform.localScale.x;
+
+        PhotonNetwork.SendRate = 60;
+        PhotonNetwork.SerializationRate = 60;
     }
 
     void Update()
     {
+        if(health <= 0)
+        {
+            // قبلی: GetComponent<GameManager>().GameOver();
+            if (pv != null && pv.IsMine)
+            {
+                GameManager.Instance.RequestPlayerLose(pv.OwnerActorNr);
+            }
+            // اگر pv.IsMine نیست، نخواهم کرد چون باید فقط مالک درخواست بفرسته
+        }   
         if(!pv.IsMine) return;
 
         if (isWall)
@@ -83,14 +110,22 @@ public class Player : MonoBehaviourPun
         HandleCollision();
         HandleFlip(move);
         HandleAnimation();
+
+        cameraObject.transform.position = Vector3.Lerp(cameraObject.transform.position , new Vector3(transform.position.x , transform.position.y , cameraObject.transform.position.z) , Time.deltaTime);
     }
     void FixedUpdate()
     {
         if(!pv.IsMine) return;
 
         if(isWallJumping) return;
+        if(isHit) return;
 
         rb.linearVelocity = new Vector2(move * speed , rb.linearVelocity.y);
+
+    }
+    void LateUpdate()
+    {
+        canvasObject.transform.position = new Vector3(transform.position.x , transform.position.y + yPos , transform.position.z);
     }
     private void Movement(InputAction.CallbackContext ctx)
     {
@@ -110,6 +145,8 @@ public class Player : MonoBehaviourPun
             rb.linearVelocity = new Vector2(faceRight ? wallJump : -wallJump, jumpForce);
         }
         StopAllCoroutines();
+        GetComponent<SpriteRenderer>().enabled = true;
+        dontHit = false;
         StartCoroutine(WallJumping());
     }
 
@@ -119,6 +156,56 @@ public class Player : MonoBehaviourPun
         yield return new WaitForSeconds(0.7f);
         isWallJumping = false;
     }
+    public void Hit()
+    {
+        if(isHit) return;
+        if(dontHit) return;
+
+        health --; 
+        animator.SetTrigger("isHit");
+
+        isWallJumping = false;
+
+        if (faceRight)
+        {
+            rb.linearVelocity = new Vector2(-4 , rb.linearVelocity.y);
+        }
+        else if (!faceRight)
+        {
+            rb.linearVelocity = new Vector2(4 , rb.linearVelocity.y);
+        }
+        StopAllCoroutines();
+        StartCoroutine(Hitting());
+    }
+    private IEnumerator Hitting()
+    {
+        isHit = true;
+        yield return new WaitForSeconds(0.3f);
+        isHit = false;
+        StartCoroutine(HittingAnimation());
+    }
+    private IEnumerator HittingAnimation()
+    {
+        dontHit = true;
+        GetComponent<SpriteRenderer>().enabled = false;
+        yield return new WaitForSeconds(0.1f);
+        GetComponent<SpriteRenderer>().enabled = true;
+        yield return new WaitForSeconds(0.1f);
+        GetComponent<SpriteRenderer>().enabled = false;
+        yield return new WaitForSeconds(0.1f);
+        GetComponent<SpriteRenderer>().enabled = true;
+        yield return new WaitForSeconds(0.1f);
+        GetComponent<SpriteRenderer>().enabled = false;
+        yield return new WaitForSeconds(0.1f);
+        GetComponent<SpriteRenderer>().enabled = true;
+        yield return new WaitForSeconds(0.1f);
+        GetComponent<SpriteRenderer>().enabled = false;
+        yield return new WaitForSeconds(0.1f);
+        GetComponent<SpriteRenderer>().enabled = true;
+        yield return new WaitForSeconds(0.1f);
+        dontHit = false;
+    }
+
     private void HandleFlip(float direction)
     {
         if (direction > 0 && !faceRight)
@@ -154,5 +241,15 @@ public class Player : MonoBehaviourPun
     {
         Gizmos.DrawLine(transform.position , new Vector2(transform.position.x , transform.position.y - groundCheckDistance));
         Gizmos.DrawLine(transform.position, new Vector2(transform.position.x + (faceDir * wallCheckDistance) , transform.position.y));
+    }
+        public void Die()
+    {
+        if (photonView.IsMine)
+        {
+            PhotonNetwork.Destroy(gameObject);
+
+            if(canvasObject != null)
+                Destroy(canvasObject);
+        }
     }
 }

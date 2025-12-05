@@ -1,4 +1,3 @@
-using Unity.Android.Gradle.Manifest;
 using UnityEngine;
 
 public class Enemy : MonoBehaviour
@@ -65,5 +64,12 @@ public class Enemy : MonoBehaviour
         Gizmos.DrawLine(transform.position , new Vector2(transform.position.x , transform.position.y - groundCheckDistance));
         Gizmos.DrawLine(checkNoGroundTransform.position , new Vector2(checkNoGroundTransform.position.x , checkNoGroundTransform.position.y - groundCheckDistance));
         Gizmos.DrawLine(transform.position , new Vector2(transform.position.x + (faceDir * wallCheckDistance) , transform.position.y));
+    }
+    void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.GetComponent<Player>() != null)
+        {
+            collision.GetComponent<Player>().Hit();
+        }
     }
 }
